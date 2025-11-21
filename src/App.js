@@ -1,107 +1,111 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 
-// --- ВАЖНО: НАСТРОЙКА ФАЙЛОВ ---
-// Переместите файлы видео в папку 'public' и назовите их video1.mp4, video2.mp4, video3.mp4
+// --- НАСТРОЙКА ФАЙЛОВ ---
 const assets = {
-  // background: '/image_c54f41.png',
-  ornament1: '/1.jpg', 
-  ornament2: '/2.jpg', 
-  ornament3: '/3.jpg', 
-  girl: '/Gemini_Generated_Image_ccszxqccszxqccsz.jpg',
-  // Видео файлы
-  video1: '/1.mp4',
-  video2: '/2.mp4',
-  video3: '/3.mp4', 
-};
-
-// --- Компонент для картинки с защитой от ошибок ---
-const SafeImage = ({ src, alt, style, ...props }) => {
-  const [hasError, setHasError] = useState(false);
-
-  if (hasError) {
-    return (
-      <div style={{
-        ...style, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        backgroundColor: '#f8d7da', 
-        color: '#721c24', 
-        fontSize: '12px', 
-        textAlign: 'center',
-        border: '2px dashed #f5c6cb',
-        padding: '5px'
-      }}>
-        Нет файла: <br/> {src}
-      </div>
-    );
-  }
-
-  return (
-    <img 
-      src={src} 
-      alt={alt} 
-      style={style} 
-      onError={() => setHasError(true)} 
-      {...props} 
-    />
-  );
+  ornament1: "/1.jpg",
+  ornament2: "/2.jpg",
+  ornament3: "/3.jpg",
+  video1: "/1.mp4",
+  video2: "/2.mp4",
+  video3: "/3.mp4",
+  reward1: "/1.1.png",
+  reward2: "/2.2.png",
+  reward3: "/3.3.png",
+  girlBase: "/Gemini_Generated_Image_ccszxqccszxqccsz.jpg",
 };
 
 // --- Данные квиза ---
 const quizData = {
   ornament1: {
-    id: 'ornament1',
-    title: 'Украшение №1',
-    question: "Как называется это украшение и где его традиционно носят?",
+    id: "ornament1",
+    title: "Сұрақ №1",
+    question: "Протарголды қандай бөтелкеге құяды?",
     options: [
-      "Сырға, носят в ушах",
-      "Блезік (браслет), носят на запястье",
-      "Шолпы, вплетают в косы"
+      "Мөлдір түссіз шыны ыдысқа",
+      "Қоңыр түсті бөтелкеге",
+      "Ақ фарфор ыдысқа",
     ],
-    correctAnswer: "Блезік (браслет), носят на запястье",
-    videoSrc: assets.video1, // Ссылка на видео для этого вопроса
+    correctAnswer: "Қоңыр түсті бөтелкеге",
+    videoSrc: assets.video1,
+    rewardImage: assets.reward1,
   },
   ornament2: {
-    id: 'ornament2',
-    title: 'Украшение №2',
-    question: "Каково основное значение нагрудных украшений (Алқа, Тұмар) у казахов?",
+    id: "ornament2",
+    title: "Сұрақ №2",
+    question: "Протаргол неге қараяды?",
     options: [
-      "Они служили только для красоты",
-      "Их носили только мужчины",
-      "Они часто служили оберегами и защитой"
+      "Ауамен әрекеттесіп тотығады",
+      "Жарық әсерінен металл күміске дейін тотықсызданады",
+      "Бөлме температурасының жоғарылауынан",
     ],
-    correctAnswer: "Они часто служили оберегами и защитой",
+    correctAnswer: "Жарық әсерінен металл күміске дейін тотықсызданады",
     videoSrc: assets.video2,
+    rewardImage: assets.reward2,
   },
   ornament3: {
-    id: 'ornament3',
-    title: 'Украшение №3',
-    question: "Что это за парное украшение?",
+    id: "ornament3",
+    title: "Сұрақ №3",
+    question: "Колларгол деген не?",
     options: [
-      "Сырға (серьги)",
-      "Жүзік (кольца)",
-      "Білезік (парные браслеты)"
+      "30% Ag2O + 70% ЖМҚ қоспасы",
+      "2% күміс нитратының сулы ерітіндісі",
+      "70% Ag2O + 30% ЖМҚ (изальбин, протальбин тұздары)",
     ],
-    correctAnswer: "Сырға (серьги)",
+    correctAnswer: "70% Ag2O + 30% ЖМҚ (изальбин, протальбин тұздары)",
     videoSrc: assets.video3,
+    rewardImage: assets.reward3,
   },
 };
 
 function App() {
+  // Состояния загрузки
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(false);
+
   const [currentOrnamentId, setCurrentOrnamentId] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
-  const [showGirlModal, setShowGirlModal] = useState(false);
-  // Новое состояние: показываем ли сейчас видео
+  const [showRewardModal, setShowRewardModal] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-  
+
   const [earnedOrnaments, setEarnedOrnaments] = useState([]);
   const videoRef = useRef(null);
 
+  // --- ЭФФЕКТ ПРЕДЗАГРУЗКИ ---
+  useEffect(() => {
+    const imageUrls = [
+      assets.background,
+      assets.ornament1,
+      assets.ornament2,
+      assets.ornament3,
+      assets.reward1,
+      assets.reward2,
+      assets.reward3,
+      assets.girlBase,
+    ];
+
+    let loadedCount = 0;
+    const total = imageUrls.length;
+
+    const checkDone = () => {
+      loadedCount++;
+      if (loadedCount === total) {
+        setTimeout(() => setIsAppLoading(false), 500); // Небольшая задержка для плавности
+      }
+    };
+
+    imageUrls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+      img.onload = checkDone;
+      img.onerror = checkDone; // Даже если ошибка, продолжаем
+    });
+  }, []);
+
   const handleOrnamentClick = (ornamentId) => {
     if (earnedOrnaments.includes(ornamentId)) {
-        alert("Вы уже получили это украшение!");
-        return;
+      setCurrentOrnamentId(ornamentId);
+      setShowRewardModal(true);
+      return;
     }
     setCurrentOrnamentId(ornamentId);
     setShowQuizModal(true);
@@ -109,304 +113,355 @@ function App() {
 
   const handleAnswerClick = (selectedOption) => {
     const currentQuiz = quizData[currentOrnamentId];
-    
+
     if (selectedOption === currentQuiz.correctAnswer) {
-      // 1. Сохраняем прогресс
       if (!earnedOrnaments.includes(currentOrnamentId)) {
         setEarnedOrnaments([...earnedOrnaments, currentOrnamentId]);
       }
-      // 2. Закрываем квиз
       setShowQuizModal(false);
-      // 3. Открываем видео (вместо девушки)
       setShowVideoPlayer(true);
+      setIsVideoBuffering(true); // Ставим индикатор загрузки видео
     } else {
-      alert("К сожалению, ответ неверный. Попробуйте еще раз!");
+      alert("Қате жауап! Қайтадан көріңіз.");
       setShowQuizModal(false);
     }
   };
 
-  // Когда видео заканчивается
   const handleVideoEnd = () => {
-      setShowVideoPlayer(false);
-      setShowGirlModal(true); // Показываем девушку после видео
+    setShowVideoPlayer(false);
+    setIsVideoBuffering(false);
+    setShowRewardModal(true);
   };
 
-  const closeGirlModal = () => {
-    setShowGirlModal(false);
+  const closeRewardModal = () => {
+    setShowRewardModal(false);
     setCurrentOrnamentId(null);
   };
 
   // --- Стили ---
   const styles = {
     container: {
-        position: 'relative',
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: '#ccc', 
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
+      position: "relative",
+      width: "100vw",
+      height: "100vh",
+      // backgroundImage: `url(${assets.background})`,
+      // backgroundSize: 'cover',
+      // backgroundPosition: 'center',
+      backgroundColor: "#ccc",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      overflow: "hidden",
     },
-    backgroundLayer: {
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        // backgroundImage: `url(${assets.background})`,
-        // backgroundSize: 'cover',
-        // backgroundPosition: 'center',
-        backgroundColor: 'rgba(122,112,121,0.4)',
-        zIndex: 0,
+    loadingScreen: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "#fff",
+      zIndex: 9999,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      color: "#d4af37",
+      fontSize: "1.5rem",
+      fontWeight: "bold",
     },
-    contentLayer: {
-        position: 'relative',
-        zIndex: 1,
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+    spinner: {
+      width: "50px",
+      height: "50px",
+      border: "5px solid #f3f3f3",
+      borderTop: "5px solid #d4af37",
+      borderRadius: "50%",
+      animation: "spin 1s linear infinite",
+      marginBottom: "20px",
     },
     ornamentsContainer: {
-        display: 'flex',
-        gap: '50px',
-        padding: '20px',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        borderRadius: '20px',
-        backdropFilter: 'blur(5px)',
+      display: "flex",
+      gap: "50px",
+      padding: "30px",
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      borderRadius: "30px",
+      backdropFilter: "blur(10px)",
+      border: "1px solid rgba(255, 255, 255, 0.3)",
+      boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
     },
     ornamentItem: {
-        width: '120px',
-        height: '120px',
-        objectFit: 'cover',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        border: '3px solid gold',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        backgroundColor: '#fff', 
+      width: "140px",
+      height: "140px",
+      objectFit: "contain",
+      borderRadius: "50%",
+      cursor: "pointer",
+      border: "4px solid #d4af37",
+      backgroundColor: "#fff",
+      padding: "10px",
+      transition: "all 0.3s ease",
     },
     ornamentItemEarned: {
-        filter: 'grayscale(80%)',
-        opacity: 0.7,
-        cursor: 'default',
-        borderColor: '#ccc',
+      borderColor: "#4caf50",
+      filter: "brightness(0.9)",
+      transform: "scale(0.95)",
     },
     modalOverlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.9)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 100,
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.9)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 100,
     },
     quizBox: {
-        backgroundColor: '#fff',
-        padding: '30px',
-        borderRadius: '15px',
-        maxWidth: '500px',
-        textAlign: 'center',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+      backgroundColor: "#fff",
+      padding: "40px",
+      borderRadius: "20px",
+      maxWidth: "600px",
+      textAlign: "center",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+      border: "2px solid #d4af37",
     },
     videoBox: {
-        width: '80%',
-        maxWidth: '800px',
-        backgroundColor: '#000',
-        borderRadius: '10px',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+      width: "80%",
+      maxWidth: "900px",
+      backgroundColor: "#000",
+      borderRadius: "20px",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      border: "2px solid #d4af37",
+      position: "relative", // Для лоадера внутри
+    },
+    videoLoader: {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      color: "#fff",
+      fontSize: "1.2rem",
     },
     questionText: {
-        fontSize: '1.2rem',
-        marginBottom: '20px',
-        color: '#333',
+      fontSize: "1.5rem",
+      marginBottom: "30px",
+      color: "#333",
+      fontWeight: "bold",
     },
     optionButton: {
-        display: 'block',
-        width: '100%',
-        padding: '12px 20px',
-        margin: '10px 0',
-        border: '2px solid #d4af37',
-        borderRadius: '8px',
-        backgroundColor: '#fffbe6',
-        fontSize: '1rem',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
+      display: "block",
+      width: "100%",
+      padding: "15px 25px",
+      margin: "12px 0",
+      border: "2px solid #d4af37",
+      borderRadius: "12px",
+      backgroundColor: "#fffbe6",
+      fontSize: "1.1rem",
+      cursor: "pointer",
+      transition: "all 0.2s",
+      fontWeight: "500",
     },
     skipButton: {
-        marginTop: '10px',
-        padding: '8px 16px',
-        backgroundColor: '#333',
-        color: '#fff',
-        border: '1px solid #555',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        marginBottom: '10px'
+      marginTop: "15px",
+      padding: "10px 20px",
+      backgroundColor: "rgba(255,255,255,0.1)",
+      color: "#fff",
+      border: "1px solid #fff",
+      borderRadius: "30px",
+      cursor: "pointer",
+      marginBottom: "15px",
+      fontSize: "0.9rem",
+      zIndex: 10,
     },
-    girlContainer: {
-        position: 'relative',
-        width: 'auto',
-        height: '90vh',
-        backgroundColor: '#fff',
-        borderRadius: '15px',
-        overflow: 'hidden',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
-        display: 'flex',
-        justifyContent: 'center',
+    rewardContainer: {
+      position: "relative",
+      height: "90vh",
+      backgroundColor: "transparent",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
     },
-    girlBaseImage: {
-        height: '100%',
-        width: 'auto',
-        objectFit: 'contain',
+    rewardImage: {
+      maxHeight: "85vh",
+      maxWidth: "90vw",
+      borderRadius: "20px",
+      border: "5px solid #d4af37",
+      boxShadow: "0 0 50px rgba(212, 175, 55, 0.5)",
+      objectFit: "contain",
+      backgroundColor: "#fff",
     },
     closeButton: {
-        position: 'absolute',
-        top: '20px',
-        right: '20px',
-        padding: '10px 20px',
-        backgroundColor: '#d4af37',
-        border: 'none',
-        borderRadius: '5px',
-        color: 'white',
-        fontSize: '1rem',
-        cursor: 'pointer',
-        zIndex: 10,
-    },
-    // Позиции украшений на девушке
-    wornOrnament1: { 
-        position: 'absolute',
-        top: '58%', 
-        left: '35%',
-        width: '10%',
-        transform: 'rotate(-20deg)',
-        zIndex: 2,
-        filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.5))'
-    },
-    wornOrnament2: { 
-        position: 'absolute',
-        top: '28%', 
-        left: '46%',
-        width: '15%',
-        zIndex: 3,
-        filter: 'drop-shadow(2px 4px 4px rgba(0,0,0,0.5))'
-    },
-    wornOrnament3: { 
-        position: 'absolute',
-        top: '18%', 
-        left: '42%',
-        width: '16%',
-        zIndex: 3,
-        filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.5))'
+      position: "absolute",
+      top: "20px",
+      right: "-60px",
+      width: "50px",
+      height: "50px",
+      backgroundColor: "#fff",
+      border: "none",
+      borderRadius: "50%",
+      color: "#333",
+      fontSize: "1.5rem",
+      fontWeight: "bold",
+      cursor: "pointer",
+      boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     },
   };
 
+  // --- Экран загрузки приложения ---
+  if (isAppLoading) {
+    return (
+      <div style={styles.loadingScreen}>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        <div style={styles.spinner}></div>
+        <p>Жүктелуде...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
-      <div style={styles.backgroundLayer} />
-      
-      <div style={styles.contentLayer}>
-        {/* --- Главный экран --- */}
-        {!showGirlModal && !showQuizModal && !showVideoPlayer && (
-            <div style={styles.ornamentsContainer}>
-                {['ornament1', 'ornament2', 'ornament3'].map((id) => {
-                    const isEarned = earnedOrnaments.includes(id);
-                    const itemStyle = isEarned
-                        ? { ...styles.ornamentItem, ...styles.ornamentItemEarned }
-                        : styles.ornamentItem;
+      {/* --- Главный экран --- */}
+      {!showRewardModal && !showQuizModal && !showVideoPlayer && (
+        <div style={styles.ornamentsContainer}>
+          {["ornament1", "ornament2", "ornament3"].map((id) => {
+            const isEarned = earnedOrnaments.includes(id);
+            const itemStyle = isEarned
+              ? { ...styles.ornamentItem, ...styles.ornamentItemEarned }
+              : styles.ornamentItem;
 
-                    return (
-                        <SafeImage
-                            key={id}
-                            src={assets[id]}
-                            alt={`Казахское украшение ${id}`}
-                            style={itemStyle}
-                            onMouseOver={(e) => !isEarned && (e.currentTarget.style.transform = 'scale(1.1)')}
-                            onMouseOut={(e) => !isEarned && (e.currentTarget.style.transform = 'scale(1)')}
-                            onClick={() => handleOrnamentClick(id)}
-                        />
-                    );
-                })}
-            </div>
-        )}
-
-        {/* --- Модальное окно Квиза --- */}
-        {showQuizModal && currentOrnamentId && (
-            <div style={styles.modalOverlay}>
-            <div style={styles.quizBox}>
-                <h2 style={{color: '#d4af37'}}>{quizData[currentOrnamentId].title}</h2>
-                <p style={styles.questionText}>{quizData[currentOrnamentId].question}</p>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                    {quizData[currentOrnamentId].options.map((option, index) => (
-                    <button
-                        key={index}
-                        style={styles.optionButton}
-                        onClick={() => handleAnswerClick(option)}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ffeba0'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fffbe6'}
-                    >
-                        {option}
-                    </button>
-                    ))}
-                </div>
-                <button
-                    style={{marginTop: '20px', padding: '10px', border: 'none', background: 'transparent', color: '#888', cursor:'pointer'}}
-                    onClick={() => setShowQuizModal(false)}
-                >
-                    Отмена
-                </button>
-            </div>
-            </div>
-        )}
-
-        {/* --- ВИДЕО ПЛЕЕР (Новое!) --- */}
-        {showVideoPlayer && currentOrnamentId && (
-             <div style={styles.modalOverlay}>
-                <div style={styles.videoBox}>
-                    <video 
-                        ref={videoRef}
-                        src={quizData[currentOrnamentId].videoSrc}
-                        style={{width: '100%', maxHeight: '80vh'}}
-                        controls
-                        autoPlay // Пытаемся запустить автоматически
-                        onEnded={handleVideoEnd} // Когда видео кончится, вызовется функция
-                    >
-                        Ваш браузер не поддерживает видео.
-                    </video>
-                    <button style={styles.skipButton} onClick={handleVideoEnd}>
-                        Пропустить видео
-                    </button>
-                </div>
-             </div>
-        )}
-
-        {/* --- Экран с Девушкой --- */}
-        {showGirlModal && (
-            <div style={styles.modalOverlay}>
-            <div style={styles.girlContainer}>
-                <button style={styles.closeButton} onClick={closeGirlModal}>
-                    {earnedOrnaments.length === 3 ? "Отличная работа!" : "Продолжить собирать"}
-                </button>
-
-                <SafeImage 
-                    src={assets.girl} 
-                    style={styles.girlBaseImage} 
-                    alt="Девушка" 
+            return (
+              <div
+                key={id}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <img
+                  src={assets[id]}
+                  alt={`Казахское украшение ${id}`}
+                  style={itemStyle}
+                  onMouseOver={(e) =>
+                    !isEarned &&
+                    (e.currentTarget.style.transform = "scale(1.1)")
+                  }
+                  onMouseOut={(e) =>
+                    !isEarned && (e.currentTarget.style.transform = "scale(1)")
+                  }
+                  onClick={() => handleOrnamentClick(id)}
                 />
+                {isEarned && (
+                  <span
+                    style={{
+                      marginTop: "10px",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      textShadow: "0 2px 4px #000",
+                    }}
+                  >
+                    Жарайсың!
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-                {earnedOrnaments.includes('ornament1') && (
-                    <SafeImage src={assets.ornament1} style={styles.wornOrnament1} alt="Браслет" />
-                )}
-                {earnedOrnaments.includes('ornament2') && (
-                    <SafeImage src={assets.ornament2} style={styles.wornOrnament2} alt="Нагрудное" />
-                )}
-                {earnedOrnaments.includes('ornament3') && (
-                    <SafeImage src={assets.ornament3} style={styles.wornOrnament3} alt="Серьги" />
-                )}
+      {/* --- Модальное окно Квиза --- */}
+      {showQuizModal && currentOrnamentId && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.quizBox}>
+            <h2 style={{ color: "#d4af37", marginBottom: "20px" }}>
+              {quizData[currentOrnamentId].title}
+            </h2>
+            <p style={styles.questionText}>
+              {quizData[currentOrnamentId].question}
+            </p>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {quizData[currentOrnamentId].options.map((option, index) => (
+                <button
+                  key={index}
+                  style={styles.optionButton}
+                  onClick={() => handleAnswerClick(option)}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#ffeba0")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#fffbe6")
+                  }
+                >
+                  {option}
+                </button>
+              ))}
             </div>
-            </div>
-        )}
-      </div>
+            <button
+              style={{
+                marginTop: "20px",
+                padding: "10px",
+                border: "none",
+                background: "transparent",
+                color: "#888",
+                cursor: "pointer",
+              }}
+              onClick={() => setShowQuizModal(false)}
+            >
+              Артқа қайту
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- ВИДЕО ПЛЕЕР --- */}
+      {showVideoPlayer && currentOrnamentId && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.videoBox}>
+            {isVideoBuffering && (
+              <div style={styles.videoLoader}>Видео жүктелуде...</div>
+            )}
+            <video
+              ref={videoRef}
+              src={quizData[currentOrnamentId].videoSrc}
+              style={{ width: "100%", maxHeight: "70vh" }}
+              controls
+              autoPlay
+              onCanPlay={() => setIsVideoBuffering(false)} // Убираем лоадер, когда видео готово
+              onWaiting={() => setIsVideoBuffering(true)} // Показываем, если зависло
+              onEnded={handleVideoEnd}
+            >
+              Сіздің браузеріңіз видеоны қолдамайды.
+            </video>
+            <button style={styles.skipButton} onClick={handleVideoEnd}>
+              Видеоны өткізіп жіберу
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- ФИНАЛ --- */}
+      {showRewardModal && currentOrnamentId && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.rewardContainer}>
+            <button style={styles.closeButton} onClick={closeRewardModal}>
+              ✕
+            </button>
+            <img
+              src={quizData[currentOrnamentId].rewardImage}
+              style={styles.rewardImage}
+              alt="Награда"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
